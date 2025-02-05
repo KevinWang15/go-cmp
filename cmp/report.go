@@ -18,6 +18,8 @@ package cmp
 type defaultReporter struct {
 	root *valueNode
 	curr *valueNode
+
+	noLimitVerbosity bool
 }
 
 func (r *defaultReporter) PushStep(ps PathStep) {
@@ -42,7 +44,12 @@ func (r *defaultReporter) String() string {
 		return ""
 	}
 	ptrs := new(pointerReferences)
-	text := formatOptions{}.FormatDiff(r.root, ptrs)
+	options := formatOptions{}
+	if r.noLimitVerbosity {
+		falseValue := false
+		options = formatOptions{formatValueOptions: formatValueOptions{LimitVerbosity: &falseValue}}
+	}
+	text := options.FormatDiff(r.root, ptrs)
 	resolveReferences(text)
 	return text.String()
 }

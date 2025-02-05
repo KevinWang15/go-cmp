@@ -63,7 +63,8 @@ func (opts formatOptions) WithTypeMode(t typeMode) formatOptions {
 }
 func (opts formatOptions) WithVerbosity(level int) formatOptions {
 	opts.VerbosityLevel = level
-	opts.LimitVerbosity = true
+	trueValue := true
+	opts.LimitVerbosity = &trueValue
 	return opts
 }
 func (opts formatOptions) verbosity() uint {
@@ -96,10 +97,12 @@ func verbosityPreset(opts formatOptions, i int) formatOptions {
 // FormatDiff converts a valueNode tree into a textNode tree, where the later
 // is a textual representation of the differences detected in the former.
 func (opts formatOptions) FormatDiff(v *valueNode, ptrs *pointerReferences) (out textNode) {
-	if opts.DiffMode == diffIdentical {
-		opts = opts.WithVerbosity(1)
-	} else if opts.verbosity() < 3 {
-		opts = opts.WithVerbosity(3)
+	if opts.LimitVerbosity == nil || *opts.LimitVerbosity {
+		if opts.DiffMode == diffIdentical {
+			opts = opts.WithVerbosity(1)
+		} else if opts.verbosity() < 3 {
+			opts = opts.WithVerbosity(3)
+		}
 	}
 
 	// Check whether we have specialized formatting for this node.
@@ -217,11 +220,11 @@ func (opts formatOptions) formatDiffList(recs []reportRecord, k reflect.Kind, pt
 	case reflect.Map:
 		name = "entry"
 		opts = opts.WithTypeMode(elideType)
-		formatKey = func(v reflect.Value) string { return formatMapKey(v, false, ptrs) }
+		formatKey = func(v reflect.Value) string { return formatMapKey(v, false, ptrs, opts.LimitVerbosity) }
 	}
 
 	maxLen := -1
-	if opts.LimitVerbosity {
+	if opts.LimitVerbosity != nil && *opts.LimitVerbosity {
 		if opts.DiffMode == diffIdentical {
 			maxLen = ((1 << opts.verbosity()) >> 1) << 2 // 0, 4, 8, 16, 32, etc...
 		} else {
@@ -395,7 +398,7 @@ func (opts formatOptions) formatDiffList(recs []reportRecord, k reflect.Kind, pt
 		if ambiguous {
 			for i, k := range keys {
 				if k.IsValid() {
-					list[i].Key = formatMapKey(k, true, ptrs)
+					list[i].Key = formatMapKey(k, true, ptrs, opts.LimitVerbosity)
 				}
 			}
 		}

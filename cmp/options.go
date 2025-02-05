@@ -560,3 +560,17 @@ func flattenOptions(dst, src Options) Options {
 	}
 	return dst
 }
+
+// WithFullVerbosity returns an Option that disables all truncations in the diff output.
+func WithFullVerbosity() Option {
+	return fullVerbosity{}
+}
+
+// fullVerbosity is an Option that disables all truncations in the diff output.
+type fullVerbosity struct {
+	core
+}
+
+func (f fullVerbosity) filter(s *state, t reflect.Type, vx, vy reflect.Value) applicableOption {
+	return nil
+}

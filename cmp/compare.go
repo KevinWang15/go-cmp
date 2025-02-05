@@ -127,6 +127,13 @@ func Diff(x, y interface{}, opts ...Option) string {
 	}
 
 	r := new(defaultReporter)
+
+	for _, opt := range opts {
+		if _, ok := opt.(fullVerbosity); ok {
+			r.noLimitVerbosity = true
+		}
+	}
+
 	s.reporters = append(s.reporters, reporter{r})
 	s.compareAny(rootStep(x, y))
 	d := r.String()

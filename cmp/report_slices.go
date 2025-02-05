@@ -380,7 +380,7 @@ func (opts formatOptions) formatDiffSlice(
 
 	var numDiffs int
 	maxLen := -1
-	if opts.LimitVerbosity {
+	if opts.LimitVerbosity != nil && *opts.LimitVerbosity {
 		maxLen = (1 << opts.verbosity()) << 2 // 4, 8, 16, 32, 64, etc...
 		opts.VerbosityLevel--
 	}

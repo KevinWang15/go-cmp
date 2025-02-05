@@ -43,7 +43,7 @@ type formatValueOptions struct {
 	VerbosityLevel int
 
 	// LimitVerbosity specifies that formatting should respect VerbosityLevel.
-	LimitVerbosity bool
+	LimitVerbosity *bool
 }
 
 // FormatType prints the type as if it were wrapping s.
@@ -185,7 +185,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, parentKind reflect.Kind, 
 		var list textList
 		v := makeAddressable(v) // needed for retrieveUnexportedField
 		maxLen := v.NumField()
-		if opts.LimitVerbosity {
+		if opts.LimitVerbosity != nil && *opts.LimitVerbosity {
 			maxLen = ((1 << opts.verbosity()) >> 1) << 2 // 0, 4, 8, 16, 32, etc...
 			opts.VerbosityLevel--
 		}
@@ -225,7 +225,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, parentKind reflect.Kind, 
 		fallthrough
 	case reflect.Array:
 		maxLen := v.Len()
-		if opts.LimitVerbosity {
+		if opts.LimitVerbosity != nil && *opts.LimitVerbosity {
 			maxLen = ((1 << opts.verbosity()) >> 1) << 2 // 0, 4, 8, 16, 32, etc...
 			opts.VerbosityLevel--
 		}
@@ -258,7 +258,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, parentKind reflect.Kind, 
 		defer ptrs.Pop()
 
 		maxLen := v.Len()
-		if opts.LimitVerbosity {
+		if opts.LimitVerbosity != nil && *opts.LimitVerbosity {
 			maxLen = ((1 << opts.verbosity()) >> 1) << 2 // 0, 4, 8, 16, 32, etc...
 			opts.VerbosityLevel--
 		}
@@ -268,7 +268,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, parentKind reflect.Kind, 
 				list.AppendEllipsis(diffStats{})
 				break
 			}
-			sk := formatMapKey(k, false, ptrs)
+			sk := formatMapKey(k, false, ptrs, opts.LimitVerbosity)
 			sv := opts.WithTypeMode(elideType).FormatValue(v.MapIndex(k), t.Kind(), ptrs)
 			list = append(list, textRecord{Key: sk, Value: sv})
 		}
@@ -314,7 +314,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, parentKind reflect.Kind, 
 func (opts formatOptions) formatString(prefix, s string) textNode {
 	maxLen := len(s)
 	maxLines := strings.Count(s, "\n") + 1
-	if opts.LimitVerbosity {
+	if opts.LimitVerbosity != nil && *opts.LimitVerbosity {
 		maxLen = (1 << opts.verbosity()) << 5   // 32, 64, 128, 256, etc...
 		maxLines = (1 << opts.verbosity()) << 2 //  4, 8, 16, 32, 64, etc...
 	}
@@ -356,7 +356,7 @@ func (opts formatOptions) formatString(prefix, s string) textNode {
 
 // formatMapKey formats v as if it were a map key.
 // The result is guaranteed to be a single line.
-func formatMapKey(v reflect.Value, disambiguate bool, ptrs *pointerReferences) string {
+func formatMapKey(v reflect.Value, disambiguate bool, ptrs *pointerReferences, limitVerbosity *bool) string {
 	var opts formatOptions
 	opts.DiffMode = diffIdentical
 	opts.TypeMode = elideType
@@ -364,7 +364,12 @@ func formatMapKey(v reflect.Value, disambiguate bool, ptrs *pointerReferences) s
 	opts.AvoidStringer = disambiguate
 	opts.QualifiedNames = disambiguate
 	opts.VerbosityLevel = maxVerbosityPreset
-	opts.LimitVerbosity = true
+
+	if limitVerbosity == nil || *limitVerbosity {
+		trueValue := true
+		opts.LimitVerbosity = &trueValue
+	}
+
 	s := opts.FormatValue(v, reflect.Map, ptrs).String()
 	return strings.TrimSpace(s)
 }
